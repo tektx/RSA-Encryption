@@ -23,11 +23,12 @@ def get_totatives(n: int) -> list:
     return totatives
 
 
-def get_encryption_key(product: int) -> int:
+def get_encryption_key(product: int, totatives: list) -> int:
     """ Returns the encryption key
 
     Args:
-        product (int): Product of two prime numbers
+        product: Product of two prime numbers
+        totatives: Relative prime numbers to the product
 
     Returns:
         int: Encryption key
@@ -39,7 +40,6 @@ def get_encryption_key(product: int) -> int:
         raise ValueError
 
     # Get the upper bound of the encryption number range
-    totatives = get_totatives(product)
     key_range = len(totatives)
 
     # Get the encryption key
@@ -54,6 +54,39 @@ def get_encryption_key(product: int) -> int:
     return encryption_key
 
 
+def get_decryption_key(encryption_key: int, totient: int, randomize: bool = False) -> int:
+    """ Returns the decryption key
+
+    Args:
+        encryption_key: RSA encryption key
+        totient: Number of totatives of the modulus
+        randomize: True to randomize the decryption value instead of using the first valid value
+
+    Returns:
+        int: RSA decryption key
+
+    """
+    decryption_key = None
+    temp = 1
+
+    # Use the nth valid value of the decryption key if randomize is True
+    nth_value = random.randint(1, 500)  # Use an arbitrary limit for testing purposes
+    valid_value_count = 0
+
+    while decryption_key is None:
+        # Formula: solve for d where de(mod(phi(n)) = 1. e = encryption key
+        if (temp * encryption_key) % totient == 1:
+            if randomize:
+                valid_value_count += 1
+                if valid_value_count >= nth_value:
+                    decryption_key = temp
+            else:
+                decryption_key = temp
+        temp += 1
+
+    return decryption_key
+
+
 def main():
     # Get prime numbers
     # TODO: Use random values to get primes
@@ -61,10 +94,10 @@ def main():
     prime2 = sympy.prime(4)
 
     modulus = prime1 * prime2
-    encryption_key = get_encryption_key(modulus)
+    totatives = get_totatives(modulus)
+    encryption_key = get_encryption_key(modulus, totatives)
     public_key = (encryption_key, modulus)
-    # TODO: Calculate the decryption key
-    decryption_key = ''
+    decryption_key = get_decryption_key(encryption_key, len(totatives))
     private_key = (decryption_key, modulus)
 
 
