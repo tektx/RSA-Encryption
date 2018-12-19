@@ -3,103 +3,113 @@ import random
 import sympy
 
 
-def get_totatives(n: int) -> list:
-    """ Gets the positive integers up to n that are relatively prime to n, aka Euler's totient function
+class RSA:
 
-    Args:
-        n (int): Integer to get totatives of
+    def __init__(self):
+        self.primes: tuple = None
+        self.modulus: int = None
+        self.totatives: list = None
+        self.encryption_key: int = None
+        self.decryption_key: int = None
+        self.public_key: tuple = None
+        self.private_key: tuple = None
 
-    Returns:
-        list: Totatives of n
+    def get_primes(self):
+        """ Generates prime numbers for the public and private key creation
 
-    """
-    if n < 1 or not isinstance(n, int):
-        raise ValueError
+        Returns:
 
-    totatives = []
-    for k in range(1, n+1):
-        if math.gcd(n, k) == 1:
-            totatives.append(k)
-    return totatives
+        """
+        prime1 = sympy.prime(random.randint(5, 500))  # Use arbitrary min and max primes
+        prime2 = sympy.prime(random.randint(5, 500))
+        self.primes = (prime1, prime2)
+        self.modulus = prime1 * prime2
 
+    def get_encryption_key(self):
+        """ Gets the encryption key
 
-def get_encryption_key(product: int, totatives: list) -> int:
-    """ Returns the encryption key
+        Returns:
 
-    Args:
-        product: Product of two prime numbers
-        totatives: Relative prime numbers to the product
+        """
+        if self.modulus is None:
+            self.get_primes()
 
-    Returns:
-        int: Encryption key
+        # Get the upper bound of the encryption number range
+        key_range = len(self.totatives)
 
-    """
-    # Assert a minimum value based on the lowest possible prime numbers multiplied together
-    # Can't use 6 (2*3) because no number satisfies the conditions 1<e<len(phi(6)) && e in phi(6)
-    if product < 10 or not isinstance(product, int):
-        raise ValueError
+        # Get the encryption key
+        encryption_key = None
+        while encryption_key is None:
+            # Key must be in the range 1<e<len(phi(n)) and must be coprime to both n and phi(n)
+            # 2 won't satisfy the criteria for any number, so 3 is the lower bound
+            rand_int = random.randint(3, key_range - 1)
+            if math.gcd(rand_int, key_range) == 1 and rand_int in self.totatives:
+                encryption_key = rand_int
 
-    # Get the upper bound of the encryption number range
-    key_range = len(totatives)
+        self.encryption_key = encryption_key
+        self.public_key = (encryption_key, self.modulus)
 
-    # Get the encryption key
-    encryption_key = None
-    while encryption_key is None:
-        # Key must be in the range 1<e<len(phi(n)) and must be coprime to both n and phi(n)
-        # 2 won't satisfy the criteria for any number, so 3 is the lower bound
-        rand_int = random.randint(3, key_range-1)
-        if math.gcd(rand_int, key_range) == 1 and rand_int in totatives:
-            encryption_key = rand_int
+    def get_decryption_key(self, randomize: bool = False):
+        """ Returns the decryption key
 
-    return encryption_key
+        Args:
+            randomize: True to randomize the decryption value instead of using the first valid value
 
+        Returns:
 
-def get_decryption_key(encryption_key: int, totient: int, randomize: bool = False) -> int:
-    """ Returns the decryption key
+        """
+        decryption_key = None
+        temp = 1
 
-    Args:
-        encryption_key: RSA encryption key
-        totient: Number of totatives of the modulus
-        randomize: True to randomize the decryption value instead of using the first valid value
+        # Use the nth valid value of the decryption key if randomize is True
+        nth_value = random.randint(1, 500)  # Use an arbitrary limit for testing purposes
+        valid_value_count = 0
 
-    Returns:
-        int: RSA decryption key
-
-    """
-    decryption_key = None
-    temp = 1
-
-    # Use the nth valid value of the decryption key if randomize is True
-    nth_value = random.randint(1, 500)  # Use an arbitrary limit for testing purposes
-    valid_value_count = 0
-
-    while decryption_key is None:
-        # Formula: solve for d where de(mod(phi(n)) = 1. e = encryption key
-        if (temp * encryption_key) % totient == 1:
-            if randomize:
-                valid_value_count += 1
-                if valid_value_count >= nth_value:
+        while decryption_key is None:
+            # Formula: solve for d where de(mod(phi(n)) = 1. e = encryption key
+            if (temp * self.encryption_key) % len(self.totatives) == 1:
+                if randomize:
+                    valid_value_count += 1
+                    if valid_value_count >= nth_value:
+                        decryption_key = temp
+                else:
                     decryption_key = temp
-            else:
-                decryption_key = temp
-        temp += 1
+            temp += 1
 
-    return decryption_key
+        self.decryption_key = decryption_key
+        self.private_key = (decryption_key, self.modulus)
 
+    def get_totatives(self, n):
+        """ Gets the positive integers up to n that are relatively prime to n, aka Euler's totient function
 
-def main():
-    # Get prime numbers
-    # TODO: Use random values to get primes
-    prime1 = sympy.prime(1)
-    prime2 = sympy.prime(4)
+        Args:
+            n: Integer to get totatives of
 
-    modulus = prime1 * prime2
-    totatives = get_totatives(modulus)
-    encryption_key = get_encryption_key(modulus, totatives)
-    public_key = (encryption_key, modulus)
-    decryption_key = get_decryption_key(encryption_key, len(totatives))
-    private_key = (decryption_key, modulus)
+        Returns:
+
+        """
+        if n < 1 or not isinstance(n, int):
+            raise ValueError
+
+        totatives = []
+        for k in range(1, n+1):
+            if math.gcd(n, k) == 1:
+                totatives.append(k)
+
+        self.totatives = totatives
+
+    def make_keys(self):
+        """ Generates public and private keys
+
+        Returns:
+
+        """
+        self.get_primes()
+        self.get_totatives(self.modulus)
+        self.get_encryption_key()
+        self.get_decryption_key()
 
 
 if __name__ == '__main__':
-    main()
+    rsa = RSA()
+    rsa.make_keys()
